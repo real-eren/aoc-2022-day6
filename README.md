@@ -42,7 +42,7 @@ Prime's input is created by repeating a 2.4KB file 300 thousand times, which mak
 The branch predictor only has so much capacity, though, so performance will tank after some CPU-specific length.
 This turning point is at about 308K bytes on my AMD 7700x.
 
-These next 2 plots shows the speed `y` of `dap` against the trial number `x`, with each line being a different input.
+These next 2 plots shows the latency `y` of `dap` against the trial number `x`, with each line being a different input.
 The sequence length appears in the `srand(_, ...)` term. No warmup iterations are performed.
 This was inspired by [a similar test shown by Daniel Lemire in his SIMD JSON talk](https://www.youtube.com/watch?v=wlvKAT7SZIQ&t=860s).
 ![learning period different inputs](./data/plots/david_against_trials_r7_7700x.svg)  
@@ -59,6 +59,7 @@ which is well outside the size of our L3 cache. This is all the branch predictor
 One might suggest that glibc's `memcpy` (used while building the inputs) 
 was actually mapping copied pages onto the same few physical pages -
 that wouldn't explain this behavior, but we don't need to guess as we have `perf`.
+For context, we'd expect *some* missed branches with `dap` on non-contrived inputs - we'll look closer at the algorithm later. 
 
 ---
 stats for `dap` on Prime's input, CPU=R7 7700x
@@ -100,7 +101,8 @@ stats for `dap` on 600MB random input, CPU=R7 7700x
    101,832,625,214      L1-dcache-loads:u                #    2.750 G/sec                       (38.47%)
        722,758,929      L1-dcache-load-misses:u          #    0.71% of all L1-dcache accesses   (38.46%)
 ```
-This confirms that missed branches are the primary cause and that Prime's method of generating input is unfairly biased to `dap`.
+Finally, using a long sequence of random data results in a more realistic branch miss rate, and significantly lower throughput.
+This confirms that missed branches are the primary cause and that Prime's method of generating input is unfairly biased in favor of `dap`.
 
 ### Worst case inputs
 Inputs where the duplicate characters are arranged such that an algorithm like `dap` or `conflict`
@@ -133,7 +135,7 @@ The one interesting result from it was 1.16 GB/s on `benny`, which I thought was
 Generally, it behaved like a scaled-down 9750h.
 
 ## Algorithms
-Before getting into comparing the algorithms,
+Before comparing them,
 let's look over the design of each algorithm individually to contextualize the results.
 I won't go in-depth explaining how Benny's and `dap` work as they were covered in Prime's video.
 
@@ -141,7 +143,7 @@ I won't go in-depth explaining how Benny's and `dap` work as they were covered i
 As a start, it helps to establish upper bounds for throughput.
 In this problem, that would be how fast we can load the data.
 The below line charts compare the throughput achieved with various element sizes.
-`load_1B` corresponds to loading 1 byte of memory at a time.
+`load_1B` corresponds to loading 1 byte from memory at a time.
 ![Loads graph](./data/plots/loads_compare.svg)  
 On the Zen 4, the AVX512 gathers `loadgather_4Bx16` and `loadgather_8Bx8` -
 which correspond to the instructions `vpgatherdd` and `vpgatherdq` -
@@ -304,15 +306,15 @@ becomes
 ```
 We don't care about which lane they match, so we can collapse each lane's bitmask
 to 1 or 0, representing 'some match' and 'no match'.
-Running conflict on the reversed string gets us
+Running conflict on the reversed string and collapsing the bitmasks gets us
 ```
 "bafedcbafedcba"
 [00000011111111]
-LSB          MSB
+The middle 'b' is the first element to match an earlier element.
 ```
-This bitvector is ordered as: `[lowest lane ... highest lane]`.
+This bitvector is ordered as: `[first lane ... last lane]`.
 Since it's reversed, we want to find the index of the lowest set bit.
-That corresponds to the latest character that matched an even later character.
+In the original string, that corresponds to the latest character that matched an even later character.
 That operation is called "count trailing zeros", which is a cheap instruction on modern x86-64 hardware.
 
 ^Instead of reversing the bytes we could find the highest set bit among the lanes in the bitmask,
@@ -442,9 +444,13 @@ The loop now looks like:
     }
 }
 ```
+Note on the usage of `try_for_each`: when I used a regular for loop,
+LLVM doesn't reliably unroll the loop at higher values of `NUM_CURSORS`,
+which cripples the performance.
+
 I didn't interleave the instructions between instances of `avx512_window_to_mask`,
-but the CPU's out-of-order execution capabilities seemed to cope just fine.
-The const generic version produced slightly larger assembly to the hand-rolled equivalent but had almost identical performance.
+but the CPU's out-of-order execution capabilities seems to cope just fine.
+The const generic version produces slightly larger assembly to the hand-rolled equivalents but had almost identical performance.
 ![Line chart of conflict with increasing unroll factor](./data/plots/conflicts_compare.svg)
 Just like `dap`, worst-case inputs can cause `conflict` to only advance one byte at a time.
 
@@ -475,6 +481,7 @@ Perf stats w/ input `concat(rng(x, 126), copy(20, srand(10M, x)))`:
      1,303,775,536      L1-dcache-load-misses:u          #    5.85% of all L1-dcache accesses   (38.48%)
 ```
 We can see that the interleaved iterations do roughly the same work (number of instructions) in much less time (number of cycles).
+Splitting the input into 10 streams gets us nearly 7x throughput.
 
 ### Benny variants
 Remember that data dependency I mentioned earlier during Benny's section?
@@ -526,7 +533,7 @@ I also tried `bbbeeennnnnnyyy`, but it was a regression. Which is fortunate, as 
 Here, similar to `dap`, using the `znver4` target-cpu leads to a regression on the 7700x.
 Put another way, giving more information to the compiler produced worse code.
 ![barchart benny_x2 target-cpu](./data/plots/Effect_of_target-cpu_on_benny_x2.svg)
-Here's the asm for the hot loop
+Here's the asm for the hot loop with `-Ctarget-cpu=znver4`
 ```asm
 .LBB83_11:
 	movzx edx, byte ptr [rdi + r15]
@@ -602,7 +609,17 @@ I first saw the technique in [a 2006 blog post by Mike Acton](https://cellperfor
 I also made an AVX2 variant. Because AVX2 does not have a `popcnt` equivalent, the logic more closely follows `benny_alt`.
 Frankly, it's not very good on the i7 9750h.
 ![avx2 comparison](./data/plots/gather_avx2_compare_reg.svg)
-2.5 GB/s *is* better than `dap` or `bbeennnnyy`, but not by a convincing amount considering the vast difference in complexity.
+2.5 GB/s *is* better than `dap` or `bbeennnnyy`, but not by a convincing amount considering the vast increase in complexity.
+
+The `few_regs` variants try to accomodate the lower number of registers in AVX2 - the algorithm needs more vectors than the 16
+available in AVX2, which requires spilling some of them onto the stack. On the R7 7700x, manually spilling the registers was 
+a decent speed-up, but it made no difference on the i7 9750h (the actual AVX2 target).
+Perhaps the laptop chip simply has fewer SIMD resources compared to desktop variants,
+and the manual spilling *would* pay off on, say, a 9700k? I don't have the hardware to test this, unfortunately.
+
+There was briefly a 'Twilight Zone' moment at one stage where the normal AVX2 variants (so, not `few` w/ manual spilling) would
+sometimes be **2x slower or worse**, correlated with the alignment of the stack when calling the function, with `perf` reporting significantly more TLB misses.
+However, I can no longer reproduce this behavior.
 
 ## Comparisons
 Here, I'll use random input to give the algorithms a level playing field.
@@ -612,8 +629,8 @@ My new routines provide a significant speed-up when AVX512 is available, and a s
 # Other interesting things
 
 ## Input validation
-Sometimes we need to validate our input. If we can avoid doing two passes, 
-one to validate and then one to process it, we'll likely save a lot of time.  
+Sometimes we need to validate our input. If we can avoid doing two passes - 
+one to validate and then one to process it - we'll likely save a lot of time.  
 In fact, the `gather_avx512_pre` and `gather_avx512_chunks` algorithms already perform input validation.
 ```rust
 pub unsafe fn gather_avx512_prefetch(input: &[u8]) -> Option<usize> {
@@ -641,7 +658,7 @@ At least on my Zen 4, we were bottle-necked by the gather instruction, so adding
 and 2 predictable branches doesn't really increase contention for the resources we were short on.
 
 ## Cache Contention
-For the `gather` algorithms, if all the offsets are equal modulo 4096, there is a significant slowdown. 
+For the `gather` algorithms, if all the offsets are equal modulo 4096, then there is a significant slowdown. 
 This is because on each iteration all 8 or 16 memory accesses target the same bucket in the cache, 
 which overwhelms the associativity. 
 This could be addressed by staggering the offsets, but that further complicates the algorithm.
@@ -676,7 +693,7 @@ This value is very likely to be machine-specific,
 so in practice one might collect statistics and tune the chunk size at run-time.
 
 ![chunking gather](./data/plots/gather_chunking_compare_on_dense_inputs.svg)
-The chunking variants are highly effective in practice and would make for a reasonable default.
+The chunking variants are highly effective in practice and make for a reasonable default.
 
 Other than early solutions, the chunking variant is more resilient to alignment - 
 `gather_avx512_pre`, which has 16 regions,
@@ -784,8 +801,15 @@ it may very well be faster to find them unordered and sort afterward.
 
 
 # Usage
+## Building
+This program uses the unstable `avx512` features, so it requires the nightly compiler.
+Pre-built binaries for x86-64 Linux are available in the [Releases tab](https://github.com/real-eren/aoc-2022-day6/releases)
+
+## Benching
 Instructions for running the benchmarks are in `./scripts/runner.txt` and `./scripts/runner2.txt`.
 
+## Plotting
 The output can then be processed with `./scripts/example_plot_script1.py` and `./scripts/example_plot_script2.py`.
 
+## Other
 For other uses, pass `--help` to the binary for instructions and examples.
