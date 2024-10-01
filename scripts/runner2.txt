@@ -1,0 +1,4 @@
+# Copy and adjust this command to collect data for script 2
+for i in `seq 50 50 250` `seq 260 10 360` "400" ; do \
+./target/release/day6_prime_fork --fns=david_a_perez --iters=200 --warm-up=false --report=raw \
+"concat(rng(x,$i), copy($((300000/$i)), srand(${i}k, x)), lit(qwertyuiopasdfghjkl))"; done

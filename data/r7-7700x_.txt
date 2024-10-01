@@ -1,0 +1,120 @@
+
+> concat(rng(x,5), copy(60000, srand(5k, x)), lit(zxcvbnmasdfghjkl)); 300.000MB; first window at 99.99999466666695%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.3603,5.3572,5.3571,0.0019
+
+> concat(rng(x,25), copy(12000, srand(25k, x)), lit(zxcvbnmasdfghjkl)); 300.000MB; first window at 99.99999466666695%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.4192,5.4097,5.4098,0.0025
+
+> concat(rng(x,50), copy(6000, srand(50k, x)), lit(zxcvbnmasdfghjkl)); 300.000MB; first window at 99.99999466666695%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.3908,5.3859,5.3858,0.0019
+
+> concat(rng(x,100), copy(3000, srand(100k, x)), lit(zxcvbnmasdfghjkl)); 300.000MB; first window at 99.99999466666695%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.4560,5.4477,5.4475,0.0033
+
+> concat(rng(x,150), copy(2000, srand(150k, x)), lit(zxcvbnmasdfghjkl)); 300.000MB; first window at 99.99999466666695%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.3873,5.3854,5.3851,0.0021
+
+> concat(rng(x,200), copy(1500, srand(200k, x)), lit(zxcvbnmasdfghjkl)); 300.000MB; first window at 99.99999466666695%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.4510,5.4476,5.4472,0.0029
+
+> concat(rng(x,250), copy(1200, srand(250k, x)), lit(zxcvbnmasdfghjkl)); 300.000MB; first window at 99.99999466666695%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.4446,5.4419,5.4412,0.0027
+
+> concat(rng(x,260), copy(1153, srand(260k, x)), lit(zxcvbnmasdfghjkl)); 299.780MB; first window at 99.99999466275297%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.4423,5.4366,5.4367,0.0020
+
+> concat(rng(x,270), copy(1111, srand(270k, x)), lit(zxcvbnmasdfghjkl)); 299.970MB; first window at 99.99999466613356%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.4471,5.4448,5.4443,0.0021
+
+> concat(rng(x,280), copy(1071, srand(280k, x)), lit(zxcvbnmasdfghjkl)); 299.880MB; first window at 99.99999466453276%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.4568,5.4539,5.4532,0.0039
+
+> concat(rng(x,282), copy(1063, srand(282k, x)), lit(zxcvbnmasdfghjkl)); 299.766MB; first window at 99.9999946625037%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.4748,5.4725,5.4717,0.0025
+
+> concat(rng(x,284), copy(1056, srand(284k, x)), lit(zxcvbnmasdfghjkl)); 299.904MB; first window at 99.99999466495973%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.4351,5.4330,5.4320,0.0036
+
+> concat(rng(x,286), copy(1048, srand(286k, x)), lit(zxcvbnmasdfghjkl)); 299.728MB; first window at 99.999994661827%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.4542,5.4515,5.4512,0.0020
+
+> concat(rng(x,288), copy(1041, srand(288k, x)), lit(zxcvbnmasdfghjkl)); 299.808MB; first window at 99.99999466325143%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.4531,5.4507,5.4497,0.0033
+
+> concat(rng(x,290), copy(1034, srand(290k, x)), lit(zxcvbnmasdfghjkl)); 299.860MB; first window at 99.99999466417691%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.4120,5.4096,5.4092,0.0019
+
+> concat(rng(x,292), copy(1027, srand(292k, x)), lit(zxcvbnmasdfghjkl)); 299.884MB; first window at 99.99999466460393%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.4525,5.4502,5.4496,0.0019
+
+> concat(rng(x,294), copy(1020, srand(294k, x)), lit(zxcvbnmasdfghjkl)); 299.880MB; first window at 99.99999466453276%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.4487,5.4454,5.4449,0.0028
+
+> concat(rng(x,296), copy(1013, srand(296k, x)), lit(zxcvbnmasdfghjkl)); 299.848MB; first window at 99.99999466396335%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.4730,5.4545,5.4529,0.0140
+
+> concat(rng(x,298), copy(1006, srand(298k, x)), lit(zxcvbnmasdfghjkl)); 299.788MB; first window at 99.9999946628954%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.4587,5.4558,5.4554,0.0021
+
+> concat(rng(x,300), copy(1000, srand(300k, x)), lit(zxcvbnmasdfghjkl)); 300.000MB; first window at 99.99999466666695%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.4564,5.4508,5.4263,0.1528
+
+> concat(rng(x,302), copy(993, srand(302k, x)), lit(zxcvbnmasdfghjkl)); 299.886MB; first window at 99.99999466463952%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.3830,2.7030,3.1755,1.4327
+
+> concat(rng(x,304), copy(986, srand(304k, x)), lit(zxcvbnmasdfghjkl)); 299.744MB; first window at 99.99999466211196%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.4863,5.4828,5.4821,0.0030
+
+> concat(rng(x,306), copy(980, srand(306k, x)), lit(zxcvbnmasdfghjkl)); 299.880MB; first window at 99.99999466453276%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,5.3824,5.3773,4.4528,1.1576
+
+> concat(rng(x,308), copy(974, srand(308k, x)), lit(zxcvbnmasdfghjkl)); 299.992MB; first window at 99.99999466652473%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,2.4420,2.3226,2.3360,0.0636
+
+> concat(rng(x,310), copy(967, srand(310k, x)), lit(zxcvbnmasdfghjkl)); 299.770MB; first window at 99.99999466257492%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,2.3132,2.2739,2.2664,0.0277
+
+> concat(rng(x,320), copy(937, srand(320k, x)), lit(zxcvbnmasdfghjkl)); 299.840MB; first window at 99.99999466382098%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,2.0150,1.9830,1.9871,0.0116
+
+> concat(rng(x,340), copy(882, srand(340k, x)), lit(zxcvbnmasdfghjkl)); 299.880MB; first window at 99.99999466453276%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,1.7484,1.7296,1.7318,0.0053
+
+> concat(rng(x,360), copy(833, srand(360k, x)), lit(zxcvbnmasdfghjkl)); 299.880MB; first window at 99.99999466453276%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,1.6239,1.6209,1.6207,0.0016
+
+> concat(rng(x,380), copy(789, srand(380k, x)), lit(zxcvbnmasdfghjkl)); 299.820MB; first window at 99.99999466346503%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,1.5766,1.5742,1.5742,0.0009
+
+> concat(rng(x,400), copy(750, srand(400k, x)), lit(zxcvbnmasdfghjkl)); 300.000MB; first window at 99.99999466666695%
+name,threads,best,median,mean,stddev
+"david_a_perez",1,1.5426,1.5390,1.5383,0.0028
