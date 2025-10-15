@@ -1,6 +1,3 @@
-#![feature(avx512_target_feature)]
-#![feature(stdarch_x86_avx512)]
-
 mod eren_impls;
 mod input_gen;
 
@@ -48,10 +45,10 @@ unsafe fn avx512_loadgather_4bx16(input: &[u8]) -> Option<usize> {
         "2:
 	vpxor {z1:x}, {z1:x}, {z1:x}
 	kxnorw {k1}, {k0}, {k0}
-	vpgatherdd {z1} {{{k1}}}, zmmword ptr [{ptr} + {offsets}]
+	vpgatherdd {z1} {{{k1}}}, dword ptr [{ptr} + {offsets}]
 	vpxor {z2:x}, {z2:x}, {z2:x}
 	kxnorw {k2}, {k0}, {k0}
-	vpgatherdd {z2} {{{k2}}}, zmmword ptr [{ptr} + {offsets} + 4]
+	vpgatherdd {z2} {{{k2}}}, dword ptr [{ptr} + {offsets} + 4]
 	add {ptr}, 8
 	dec {rem_iters}
 	jne 2b
@@ -82,13 +79,13 @@ unsafe fn avx512_loadgather_8bx8(input: &[u8]) -> Option<usize> {
         "2:
 	vpxor {z1:x}, {z1:x}, {z1:x}
 	kxnorw {k1}, {k0}, {k0}
-	vpgatherdq {z1} {{{k1}}}, zmmword ptr [{ptr} + {offsets}]
+	vpgatherdq {z1} {{{k1}}}, qword ptr [{ptr} + {offsets}]
 	vpxor {z2:x}, {z2:x}, {z2:x}
 	kxnorw {k2}, {k0}, {k0}
-	vpgatherdq {z2} {{{k2}}}, zmmword ptr [{ptr} + {offsets} + 8]
+	vpgatherdq {z2} {{{k2}}}, qword ptr [{ptr} + {offsets} + 8]
 	vpxor {z3:x}, {z3:x}, {z3:x}
 	kxnorw {k3}, {k0}, {k0}
-	vpgatherdq {z3} {{{k3}}}, zmmword ptr [{ptr} + {offsets} + 16]
+	vpgatherdq {z3} {{{k3}}}, qword ptr [{ptr} + {offsets} + 16]
 	add {ptr}, 24
 	dec {rem_iters}
 	jne 2b

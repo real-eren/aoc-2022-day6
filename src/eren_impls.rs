@@ -414,7 +414,7 @@ unsafe fn gather_avx512_base<const PREFETCH: bool>(input: &[u8], validate: bool)
         input.len()
     );
 
-    let offsets_v = _mm512_loadu_si512(offsets_arr.as_ptr());
+    let offsets_v = _mm512_loadu_si512(offsets_arr.as_ptr().cast());
 
     // These store 16 lanes of epi32, each lane being 1-hot encoded
     // vi = the i-th byte of each region, each epi32 lane corresponding to a region.
@@ -442,26 +442,26 @@ unsafe fn gather_avx512_base<const PREFETCH: bool>(input: &[u8], validate: bool)
             let effective_addr = ptr.byte_offset(*offset as isize * OFFSET_SCALE as isize);
             input.as_ptr() <= effective_addr && effective_addr < input.as_ptr_range().end
         }));
-        let data_1234 = gather(offsets_v, ptr);
+        let data_1234 = gather(offsets_v, ptr.cast());
         // 8 LSB are the first byte of that region.
         v1 = shl(ones_v, and(and_v32, data_1234));
         v2 = shl(ones_v, and(and_v32, shr::<8>(data_1234)));
         v3 = shl(ones_v, and(and_v32, shr::<16>(data_1234)));
         v4 = shl(ones_v, and(and_v32, shr::<24>(data_1234)));
         ptr = ptr.byte_add(4);
-        let data_5678 = gather(offsets_v, ptr);
+        let data_5678 = gather(offsets_v, ptr.cast());
         v5 = shl(ones_v, and(and_v32, data_5678));
         v6 = shl(ones_v, and(and_v32, shr::<8>(data_5678)));
         v7 = shl(ones_v, and(and_v32, shr::<16>(data_5678)));
         v8 = shl(ones_v, and(and_v32, shr::<24>(data_5678)));
         ptr = ptr.byte_add(4);
-        let data_9_10_11_12 = gather(offsets_v, ptr);
+        let data_9_10_11_12 = gather(offsets_v, ptr.cast());
         v9 = shl(ones_v, and(and_v32, data_9_10_11_12));
         v10 = shl(ones_v, and(and_v32, shr::<8>(data_9_10_11_12)));
         v11 = shl(ones_v, and(and_v32, shr::<16>(data_9_10_11_12)));
         v12 = shl(ones_v, and(and_v32, shr::<24>(data_9_10_11_12)));
         ptr = ptr.byte_add(4);
-        let data_13_x_x_x = gather(offsets_v, ptr);
+        let data_13_x_x_x = gather(offsets_v, ptr.cast());
         v13 = shl(ones_v, and(and_v32, data_13_x_x_x));
         ptr = ptr.byte_add(1);
 
@@ -518,15 +518,15 @@ unsafe fn gather_avx512_base<const PREFETCH: bool>(input: &[u8], validate: bool)
     // if no PREFETCH, then just ignore these values in the inner loop. Safe to load these here
     // because we ruled out small inputs,
     // and the compiler shouldn't dedicate registers to these two since they're unused
-    let mut data = gather(offsets_v, ptr);
-    let mut next_data = gather(offsets_v, ptr.byte_add(4));
+    let mut data = gather(offsets_v, ptr.cast());
+    let mut next_data = gather(offsets_v, ptr.byte_add(4).cast());
     for _ in 0..num_iters {
         debug_assert!(offsets_arr.iter().all(|offset| {
             let effective_addr = ptr.byte_offset(*offset as isize * OFFSET_SCALE as isize);
             input.as_ptr() <= effective_addr && effective_addr < input.as_ptr_range().end
         }));
         // if no prefetch, load the data for this iteration (0 byte offset)
-        let next_next_data = gather(offsets_v, ptr.byte_add(if PREFETCH { 8 } else { 0 }));
+        let next_next_data = gather(offsets_v, ptr.byte_add(if PREFETCH { 8 } else { 0 }).cast());
         if !PREFETCH {
             data = next_next_data;
         }
