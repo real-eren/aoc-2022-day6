@@ -467,7 +467,7 @@ unsafe fn gather_avx512_base<const PREFETCH: bool>(input: &[u8], validate: bool)
 
         [v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13]
             .into_iter()
-            .fold(_mm512_setzero_epi32(), |acc, v| unsafe { xor(acc, v) })
+            .fold(_mm512_setzero_epi32(), |acc, v| xor(acc, v))
     };
 
     let mut mask1: u16 = 0;
@@ -541,7 +541,7 @@ unsafe fn gather_avx512_base<const PREFETCH: bool>(input: &[u8], validate: bool)
             }
         }
 
-        // now every byte is 0 - 25 (assuming valid input). (very easy to add validation here, too!)
+        // now every byte is 0 - 25 (assuming valid input).
 
         v14 = shl(ones_v, and(and_v32, data));
         v15 = shl(ones_v, and(and_v32, shr::<8>(data)));
@@ -631,7 +631,7 @@ pub unsafe fn slow_mm256_popcnt_epi32(v: std::arch::x86_64::__m256i) -> std::arc
     std::mem::transmute_copy(&arr)
 }
 
-/// Like `gather_benny_avx512`, but for AVX2.
+/// Like `gather_avx512`, but for AVX2.
 /// Based on Eren's `benny_no_popcnt` variant of `benny`, since AVX2 lacks vpopcnt
 #[target_feature(enable = "avx2")]
 #[no_mangle]
@@ -645,7 +645,7 @@ pub unsafe fn gather_avx2(input: &[u8]) -> Option<usize> {
     };
     const OFFSET_SCALE: i32 = 4;
     let gather = std::arch::x86_64::_mm256_i32gather_epi32::<OFFSET_SCALE>;
-    let movemask = |v| unsafe { _mm256_movemask_ps(_mm256_castsi256_ps(v)) as u8 };
+    let movemask = |v| _mm256_movemask_ps(_mm256_castsi256_ps(v)) as u8;
 
     if input.len() < 8 * 1024 {
         return bbeennnnyy(input);
@@ -754,7 +754,7 @@ pub unsafe fn gather_avx2(input: &[u8]) -> Option<usize> {
 
         [v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13]
             .into_iter()
-            .fold(_mm256_setzero_si256(), |acc, v| unsafe { xor(acc, v) })
+            .fold(_mm256_setzero_si256(), |acc, v| xor(acc, v))
     };
 
     let mut mask1: u8 = 0;
@@ -879,7 +879,7 @@ pub unsafe fn gather_avx2(input: &[u8]) -> Option<usize> {
     })
 }
 
-/// Like `gather_benny_avx512`, but for AVX2.
+/// Like `gather_avx512`, but for AVX2.
 /// Based on Eren's `benny_no_popcnt` variant of `benny`, since AVX2 lacks vpopcnt
 /// Since AVX2 only grants 16 registers, the compiler has to spill several registers every
 /// iteration. By doing it manually, we can spill fewer.
@@ -894,7 +894,7 @@ pub unsafe fn gather_avx2_few_regs(input: &[u8]) -> Option<usize> {
     };
     const OFFSET_SCALE: i32 = 4;
     let gather = std::arch::x86_64::_mm256_i32gather_epi32::<OFFSET_SCALE>;
-    let movemask = |v| unsafe { _mm256_movemask_ps(_mm256_castsi256_ps(v)) as u8 };
+    let movemask = |v| _mm256_movemask_ps(_mm256_castsi256_ps(v)) as u8;
 
     if input.len() < 8 * 1024 {
         return bbeennnnyy(input);
@@ -992,7 +992,7 @@ pub unsafe fn gather_avx2_few_regs(input: &[u8]) -> Option<usize> {
 
         [v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13]
             .into_iter()
-            .fold(_mm256_setzero_si256(), |acc, v| unsafe { xor(acc, v) })
+            .fold(_mm256_setzero_si256(), |acc, v| xor(acc, v))
     };
 
     let mut mask1: u8 = 0;

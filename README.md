@@ -802,7 +802,7 @@ it may very well be faster to find them unordered and sort afterward.
 
 # Usage
 ## Building
-This program uses the unstable `avx512` features, so it requires the nightly compiler.
+This program requires Rust 1.89+.
 Pre-built binaries for x86-64 Linux are available in the [Releases tab](https://github.com/real-eren/aoc-2022-day6/releases)
 
 ## Benching

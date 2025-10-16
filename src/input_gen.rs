@@ -184,7 +184,7 @@ pub fn parse<'input, 'node_arena>(
         }
     }
 
-    fn split_comma(s: &str) -> ParseResult<(&str, &str)> {
+    fn split_comma(s: &str) -> ParseResult<'_, (&str, &str)> {
         match s.split_once(',') {
             Some(v) => Ok(v),
             None => Err((ParseErrType::MissingComma, s)),
