@@ -9,116 +9,6 @@ use std::{
 };
 
 /// Bandwidth test
-#[target_feature(enable = "avx512f")]
-#[no_mangle]
-unsafe fn avx512_load64(input: &[u8]) -> Option<usize> {
-    use std::arch::x86_64::_mm512_loadu_ps;
-    const OVERLAP: usize = 13;
-    const CHUNK_SIZE: usize = 64;
-    if input.len() < 14 {
-        return None;
-    }
-
-    // load 64 bytes, overlap 16
-    // use rotates to find 14 bytes same
-    let mut idx = 0;
-    while let Some(slice) = input.get(idx..(idx + CHUNK_SIZE)) {
-        let v = _mm512_loadu_ps(slice.as_ptr().cast());
-        black_box(v);
-        idx += CHUNK_SIZE - OVERLAP;
-    }
-    None
-}
-
-/// Bandwidth test
-#[target_feature(enable = "avx512f")]
-#[no_mangle]
-unsafe fn avx512_loadgather_4bx16(input: &[u8]) -> Option<usize> {
-    use std::arch::x86_64::_mm512_loadu_epi32;
-    let mut offsets = [0u32; 16];
-    for i in 0..16 {
-        offsets[i] = (i * input.len() / 16).try_into().expect("");
-    }
-    let offsets = _mm512_loadu_epi32(offsets.as_ptr().cast());
-    // black_box stores val to stack, simpler to just write the darn asm
-    std::arch::asm!(
-        "2:
-	vpxor {z1:x}, {z1:x}, {z1:x}
-	kxnorw {k1}, {k0}, {k0}
-	vpgatherdd {z1} {{{k1}}}, dword ptr [{ptr} + {offsets}]
-	vpxor {z2:x}, {z2:x}, {z2:x}
-	kxnorw {k2}, {k0}, {k0}
-	vpgatherdd {z2} {{{k2}}}, dword ptr [{ptr} + {offsets} + 4]
-	add {ptr}, 8
-	dec {rem_iters}
-	jne 2b
-",
-        offsets = in(zmm_reg) offsets,
-        z1 = out(zmm_reg) _,
-        z2 = out(zmm_reg) _,
-        k0 = out(kreg) _,
-        k1 = out(kreg) _,
-        k2 = out(kreg) _,
-        ptr = inout(reg) input.as_ptr() => _,
-        rem_iters = inout(reg) input.len() / 16 / 8 => _
-    );
-    None
-}
-
-/// Bandwidth test
-#[target_feature(enable = "avx,avx512f")]
-#[no_mangle]
-unsafe fn avx512_loadgather_8bx8(input: &[u8]) -> Option<usize> {
-    use std::arch::x86_64::_mm256_loadu_si256;
-    let mut offsets = [0u32; 8];
-    for i in 0..offsets.len() {
-        offsets[i] = (i * input.len() / offsets.len()).try_into().expect("");
-    }
-    let offsets = _mm256_loadu_si256(offsets.as_ptr().cast());
-    std::arch::asm!(
-        "2:
-	vpxor {z1:x}, {z1:x}, {z1:x}
-	kxnorw {k1}, {k0}, {k0}
-	vpgatherdq {z1} {{{k1}}}, qword ptr [{ptr} + {offsets}]
-	vpxor {z2:x}, {z2:x}, {z2:x}
-	kxnorw {k2}, {k0}, {k0}
-	vpgatherdq {z2} {{{k2}}}, qword ptr [{ptr} + {offsets} + 8]
-	vpxor {z3:x}, {z3:x}, {z3:x}
-	kxnorw {k3}, {k0}, {k0}
-	vpgatherdq {z3} {{{k3}}}, qword ptr [{ptr} + {offsets} + 16]
-	add {ptr}, 24
-	dec {rem_iters}
-	jne 2b
-",
-        offsets = in(ymm_reg) offsets,
-        z1 = out(zmm_reg) _,
-        z2 = out(zmm_reg) _,
-        z3 = out(zmm_reg) _,
-        k0 = out(kreg) _,
-        k1 = out(kreg) _,
-        k2 = out(kreg) _,
-        k3 = out(kreg) _,
-        ptr = inout(reg) input.as_ptr() => _,
-        rem_iters = inout(reg) input.len() / 8 / 24 => _
-    );
-    None
-}
-
-/// Bandwidth test
-#[no_mangle]
-unsafe fn sse2_load16(input: &[u8]) -> Option<usize> {
-    use std::arch::x86_64::_mm_loadu_si128;
-    const CHUNK_SIZE: usize = 16;
-    let mut idx = 0;
-    while let Some(slice) = input.get(idx..(idx + CHUNK_SIZE)) {
-        let v = _mm_loadu_si128(slice.as_ptr().cast());
-        black_box(v);
-        idx += CHUNK_SIZE;
-    }
-    None
-}
-
-/// Bandwidth test
 #[no_mangle]
 unsafe fn load8(input: &[u8]) -> Option<usize> {
     let (l, m, r) = input.align_to::<u64>();
@@ -164,29 +54,6 @@ pub fn benny(input: &[u8]) -> Option<usize> {
     })
 }
 
-/// SAFETY: Uses popcnt intrinsic
-#[inline(never)]
-#[target_feature(enable = "popcnt")]
-pub unsafe fn benny_popcount(input: &[u8]) -> Option<usize> {
-    if input.len() < 14 {
-        return None;
-    }
-    let mut filter = 0u32;
-    input
-        .iter()
-        .take(14 - 1)
-        .for_each(|c| filter ^= 1 << (c % 32));
-
-    input.windows(14).position(|w| {
-        let first = w[0];
-        let last = w[w.len() - 1];
-        filter ^= 1 << (last % 32);
-        let res = filter.count_ones() == 14;
-        filter ^= 1 << (first % 32);
-        res
-    })
-}
-
 #[inline(never)]
 fn david_a_perez(input: &[u8]) -> Option<usize> {
     let mut idx = 0;
@@ -209,91 +76,12 @@ fn david_a_perez(input: &[u8]) -> Option<usize> {
 
 const ID_TO_FN: &[(&str, unsafe fn(&[u8]) -> Option<usize>)] = &[
     ("benny", benny),
-    ("benny_popcnt", benny_popcount),
     ("benny_alt", benny_alt),
     ("benny_x2", bbeennnnyy),
-    ("gather_avx512_pre", gather_avx512_prefetch),
-    ("gather_avx512_chunks", gather_avx512_chunked),
-    ("gather_avx512_nopre", gather_avx512_noprefetch),
-    ("gather_avx2", gather_avx2),
-    ("gather_avx2_chnk", gather_avx2_chunked),
-    ("gather_avx2_few_regs", gather_avx2_few_regs),
-    ("gather_avx2_few_chnk", gather_avx2_few_chunked),
     ("david_a_perez", david_a_perez),
-    ("conflict", conflict),
-    ("conflict_mc1b", conflict_mc1b),
-    ("conflict_mc2b", conflict_mc2b),
-    ("conflict_mc3b", conflict_mc3b),
-    ("conflict_mc4b", conflict_mc4b),
-    ("conflict_mc5b", conflict_mc5b),
-    ("conflict_mc6b", conflict_mc6b),
-    ("conflict_mc7b", conflict_mc7b),
-    ("conflict_mc8b", conflict_mc8b),
-    ("conflict_mc9b", conflict_mc9b),
-    ("conflict_mc10b", conflict_mc10b),
-    ("conflict_mc11b", conflict_mc11b),
-    ("conflict_mc12b", conflict_mc12b),
-    ("load_64B", avx512_load64),
-    ("loadgather_4Bx16", avx512_loadgather_4bx16),
-    ("loadgather_8Bx8", avx512_loadgather_8bx8),
-    ("load_16B", sse2_load16),
     ("load_8B", load8),
     ("load_1B", load1),
 ];
-
-#[allow(non_camel_case_types)]
-#[derive(Debug, Clone, Copy)]
-enum FeatureDetector {
-    avx2,
-    avx512f,
-    avx512bw,
-    avx512cd,
-    avx512vpopcntdq,
-    bmi1,
-    popcnt,
-    sse2,
-}
-impl FeatureDetector {
-    fn is_met(&self) -> bool {
-        match self {
-            FeatureDetector::avx2 => is_x86_feature_detected!("avx2"),
-            FeatureDetector::avx512f => is_x86_feature_detected!("avx512f"),
-            FeatureDetector::avx512bw => is_x86_feature_detected!("avx512bw"),
-            FeatureDetector::avx512cd => is_x86_feature_detected!("avx512cd"),
-            FeatureDetector::avx512vpopcntdq => is_x86_feature_detected!("avx512vpopcntdq"),
-            FeatureDetector::bmi1 => is_x86_feature_detected!("bmi1"),
-            FeatureDetector::popcnt => is_x86_feature_detected!("popcnt"),
-            FeatureDetector::sse2 => is_x86_feature_detected!("sse2"),
-        }
-    }
-}
-
-/// In order to give a useful message for functions with features absent on the current platform,
-/// We associate function ids to feature lists
-const ID_TO_REQUIRED_FEATURES: &[(&str, &[FeatureDetector])] = &{
-    use FeatureDetector as FD;
-    let mut list = [("", &[] as &[FD]); ID_TO_FN.len()];
-    let mut i = 0;
-    while i < list.len() {
-        let id = ID_TO_FN[i].0;
-        list[i].0 = id;
-        // what not having const methods does to a mf
-        list[i].1 = match id.as_bytes() {
-            &[b'c', b'o', b'n', b'f', b'l', b'i', b'c', b't', ..] => &[FD::avx512f, FD::avx512cd],
-            &[b'g', b'a', b't', b'h', b'e', b'r', b'_', b'a', b'v', b'x', b'5', b'1', b'2', ..] => {
-                &[FD::avx512f, FD::avx512bw, FD::avx512vpopcntdq, FD::bmi1]
-            }
-            &[b'g', b'a', b't', b'h', b'e', b'r', b'_', b'a', b'v', b'x', b'2', ..] => &[FD::avx2],
-            b"load_64B" | b"loadgather_8Bx8" | b"loadgather_4Bx16" => &[FD::avx512f],
-            b"load_16B" => &[FD::sse2],
-            b"benny_popcnt" | b"benny_x2" => &[FD::popcnt],
-            _ => &[],
-        };
-        i += 1;
-    }
-
-    list
-};
 
 /// Group ID to ID prefix
 const GROUPS: &[(&str, &str)] = &[
@@ -302,21 +90,8 @@ const GROUPS: &[(&str, &str)] = &[
     ("loads", "load"),
     ("gather_avx2s", "gather_avx2"),
     ("gather_avx512s", "gather_avx512"),
-    ("conflicts", "conflict"),
     ("all", ""),
 ];
-
-fn find_unmet_req(name: &str) -> Option<FeatureDetector> {
-    ID_TO_REQUIRED_FEATURES
-        .iter()
-        .copied()
-        .find_map(|(id, reqs)| if name == id { Some(reqs) } else { None })
-        .iter()
-        .copied()
-        .flatten()
-        .copied()
-        .find(|req| !req.is_met())
-}
 
 /// How to format the results
 #[derive(Clone, Copy)]
@@ -645,11 +420,6 @@ fn run_bench(arg: &str, bytes: &[u8], cli_options: &CliOptions, times: &mut Vec<
     let thrpt_numerator = (search_space_size + 13.) / (GIGABYTE as f64);
 
     for (name, func) in cli_options.fns.iter().copied() {
-        if let Some(unmet_req) = find_unmet_req(name) {
-            eprintln!("Warning: fn `{name}` requires feature `{unmet_req:?}`. Skipping.");
-            continue;
-        }
-
         for &n_threads in cli_options.mts.iter() {
             let func_output = unsafe { mt(bytes, n_threads, func) };
             if !name.starts_with("load") && func_output != benny_output {
@@ -776,7 +546,7 @@ mod tests {
         ID_TO_FN
             .iter()
             .copied()
-            .filter(|&(name, _)| !name.starts_with("load") && find_unmet_req(name).is_none())
+            .filter(|&(name, _)| !name.starts_with("load"))
     }
 
     #[test]
