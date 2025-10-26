@@ -54,6 +54,45 @@ pub fn benny(input: &[u8]) -> Option<usize> {
     })
 }
 
+pub fn david_alt(input: &[u8]) -> Option<usize> {
+    let mut idx = 0;
+    let mut skip = 0;
+    loop {
+        idx += skip;
+        if idx + 14 > input.len() {
+            return None;
+        }
+        let mut mask = 1 << unsafe { input.get_unchecked(idx + 13) & 31 };
+
+        macro_rules! step {
+            ($offset: literal) => {
+                let b = 1 << unsafe { input.get_unchecked(idx + $offset) & 31 };
+                skip = $offset + 1;
+                if (mask & b) != 0 {
+                    continue;
+                }
+                mask |= b;
+            };
+        }
+
+        step!(12);
+        step!(11);
+        step!(10);
+        step!(9);
+        step!(8);
+        step!(7);
+        step!(6);
+        step!(5);
+        step!(4);
+        step!(3);
+        step!(2);
+        step!(1);
+        step!(0);
+        _ = mask;
+        return Some(idx);
+    }
+}
+
 #[inline(never)]
 fn david_a_perez(input: &[u8]) -> Option<usize> {
     let mut idx = 0;
@@ -74,11 +113,131 @@ fn david_a_perez(input: &[u8]) -> Option<usize> {
     None
 }
 
+#[cfg(all())]
+fn david_asm(input: &[u8]) -> Option<usize> {
+    if input.len() < 14 {
+        return None;
+    }
+    let mut idx = 0;
+    let mut found = 1u32;
+    unsafe {
+        std::arch::asm!(
+            "
+2: // found a dup, skip forward
+    add     {idx}, {idx}, {local_idx:x}
+    add     {ptr}, {ptr}, {local_idx:x}
+3:
+    add     {t1}, {idx}, #14    // are there 14 more bytes in the slice
+    cmp     {t1}, {len}
+    b.hi    8f                  // quit if not
+    ldrb    {t1:w}, [{ptr}, #13]
+    ldrb    {mask:w}, [{ptr}, #12]
+    mov     {local_idx:w}, #13
+    cmp     {t1:w}, {mask:w}
+    b.eq    2b // dup, skip
+    lsl     {t1:w}, {found:w}, {t1:w}
+    lsl     {mask:w}, {found:w}, {mask:w}
+    orr     {mask:w}, {mask:w}, {t1:w}
+    ldrb    {t1:w}, [{ptr}, #11]
+    lsl     {t1:w}, {found:w}, {t1:w}
+    mov     {local_idx:w}, #12
+    tst     {mask:w}, {t1:w}
+    b.ne    2b
+    orr     {mask:w}, {mask:w}, {t1:w}
+    ldrb    {t1:w}, [{ptr}, #10]
+    lsl     {t1:w}, {found:w}, {t1:w}
+    mov     {local_idx:w}, #11
+    tst     {mask:w}, {t1:w}
+    b.ne    2b
+    orr     {mask:w}, {mask:w}, {t1:w}
+    ldrb    {t1:w}, [{ptr}, #9]
+    lsl     {t1:w}, {found:w}, {t1:w}
+    mov     {local_idx:w}, #10
+    tst     {mask:w}, {t1:w}
+    b.ne    2b
+    orr     {mask:w}, {mask:w}, {t1:w}
+    ldrb    {t1:w}, [{ptr}, #8]
+    lsl     {t1:w}, {found:w}, {t1:w}
+    mov     {local_idx:w}, #9
+    tst     {mask:w}, {t1:w}
+    b.ne    2b
+    orr     {mask:w}, {mask:w}, {t1:w}
+    ldrb    {t1:w}, [{ptr}, #7]
+    lsl     {t1:w}, {found:w}, {t1:w}
+    mov     {local_idx:w}, #8
+    tst     {mask:w}, {t1:w}
+    b.ne    2b
+    orr     {mask:w}, {mask:w}, {t1:w}
+    ldrb    {t1:w}, [{ptr}, #6]
+    lsl     {t1:w}, {found:w}, {t1:w}
+    mov     {local_idx:w}, #7
+    tst     {mask:w}, {t1:w}
+    b.ne    2b
+    orr     {mask:w}, {mask:w}, {t1:w}
+    ldrb    {t1:w}, [{ptr}, #5]
+    lsl     {t1:w}, {found:w}, {t1:w}
+    mov     {local_idx:w}, #6
+    tst     {mask:w}, {t1:w}
+    b.ne    2b
+    orr     {mask:w}, {mask:w}, {t1:w}
+    ldrb    {t1:w}, [{ptr}, #4]
+    lsl     {t1:w}, {found:w}, {t1:w}
+    mov     {local_idx:w}, #5
+    tst     {mask:w}, {t1:w}
+    b.ne    2b
+    orr     {mask:w}, {mask:w}, {t1:w}
+    ldrb    {t1:w}, [{ptr}, #3]
+    lsl     {t1:w}, {found:w}, {t1:w}
+    mov     {local_idx:w}, #4
+    tst     {mask:w}, {t1:w}
+    b.ne    2b
+    orr     {mask:w}, {mask:w}, {t1:w}
+    ldrb    {t1:w}, [{ptr}, #2]
+    lsl     {t1:w}, {found:w}, {t1:w}
+    mov     {local_idx:w}, #3
+    tst     {mask:w}, {t1:w}
+    b.ne    2b
+    orr     {mask:w}, {mask:w}, {t1:w}
+    ldrb    {t1:w}, [{ptr}, #1]
+    lsl     {t1:w}, {found:w}, {t1:w}
+    mov     {local_idx:w}, #2
+    tst     {mask:w}, {t1:w}
+    b.ne    2b
+    orr     {mask:w}, {mask:w}, {t1:w}
+    ldrb    {t1:w}, [{ptr}, #0]
+    lsl     {t1:w}, {found:w}, {t1:w}
+    mov     {local_idx:w}, #1
+    tst     {mask:w}, {t1:w}
+    b.ne    2b
+    b       99f // window with no dups, exit
+8:
+    mov     {found:w}, wzr
+99:
+",
+            ptr = inout(reg) input.as_ptr() => _,
+            idx = inout(reg) idx,
+            mask = out(reg) _,
+            len = in(reg) input.len(),
+            t1 = out(reg) _,
+            local_idx = inout(reg) 0 => _,
+            found = inout(reg) found,
+            options(readonly,nostack)
+        )
+    }
+    if found != 0 {
+        Some(idx)
+    } else {
+        None
+    }
+}
+
 const ID_TO_FN: &[(&str, unsafe fn(&[u8]) -> Option<usize>)] = &[
     ("benny", benny),
     ("benny_alt", benny_alt),
     ("benny_x2", bbeennnnyy),
     ("david_a_perez", david_a_perez),
+    ("david_asm", david_asm),
+    ("david_alt", david_alt),
     ("load_8B", load8),
     ("load_1B", load1),
 ];
@@ -86,10 +245,8 @@ const ID_TO_FN: &[(&str, unsafe fn(&[u8]) -> Option<usize>)] = &[
 /// Group ID to ID prefix
 const GROUPS: &[(&str, &str)] = &[
     ("bennys", "benny"),
-    ("gathers", "gather"),
+    ("davids", "david"),
     ("loads", "load"),
-    ("gather_avx2s", "gather_avx2"),
-    ("gather_avx512s", "gather_avx512"),
     ("all", ""),
 ];
 
