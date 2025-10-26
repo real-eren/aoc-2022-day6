@@ -68,7 +68,7 @@ for algo, fig in figs.items():
 F2_ALLOWED_INPUTS=("concat(copy(300k, file(./res/data_body)), file(./res/data_end))",
                    "concat(rng(x, 3456), srand(600m, x), lit(qwertyuiopasdfgh))",
                    )
-dic = prep_hist(filter=lambda d: d.threads==1 and d.input.split(';')[0].strip().lower() in F2_ALLOWED_INPUTS and d.algo in ['david_a_perez', 'benny'],
+dic = prep_hist(filter=lambda d: d.threads==1 and d.input.split(';')[0].strip().lower() in F2_ALLOWED_INPUTS and (d.algo  == 'benny' or d.algo.startswith('david')),
                 fig_key=lambda d: '',
                 subplot_key=lambda d: d.cpu,
                 group_key=split_input,
@@ -108,7 +108,7 @@ def david_and_conflict_filter(d: DataPoint) -> bool:
     return d.threads == 1 \
         and d.input.startswith('copy(') \
         and 'lit(a' in d.input \
-        and d.algo in ['david_a_perez', 'benny', 'conflict_mc9b']
+        and (d.algo in ['benny', 'conflict_mc9b'] or d.algo.startswith('david'))
 
 # Pathological for David and conflict
 dic = prep_hist(filter=lambda d: '30.000MB' not in d.input and david_and_conflict_filter(d),
@@ -197,7 +197,7 @@ on_fig(fig, 'gather_avx2_compare_reg')
 
 
 # Final comparisons
-final_algos = ['david_a_perez', 'benny', 'benny_x2', 'gather_avx2_few_chnk', 'conflict_mc10b', 'gather_avx512_chunks']
+final_algos = ['david_a_perez', 'david_alt', 'david_asm', 'benny', 'benny_x2', 'gather_avx2_few_chnk', 'conflict_mc10b', 'gather_avx512_chunks']
 dic =  prep_hist(filter=lambda d: d.threads==1 and d.algo in final_algos and d.input.startswith("concat(rng(x, 981394)"),
                  fig_key=lambda d: '',
                  subplot_key=lambda d: d.cpu,
