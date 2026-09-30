@@ -15,8 +15,7 @@ In this post, I demonstrate a severe flaw in Prime's benchmarking methodology an
 Along the way, we'll encounter some curiosities that can cripple the performance of a tight loop.
 
 ## Credits
-First things first, kudos to Prime for making engaging content on this subject, 
-and kudos to Benny and David for their solid algorithms. 
+First things first, kudos to Benny and David for their solid algorithms. 
 
 [Primeagen's repo](https://github.com/ThePrimeagen/aoc/blob/2022/src/bin/day6_2.rs)  
 [Primeagen's YouTube video](https://www.youtube.com/watch?v=U16RnpV48KQ)  
